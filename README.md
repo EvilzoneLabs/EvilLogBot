@@ -1,0 +1,2 @@
+EvilLogBot logs channel messages in raw format to an SQLite database and pulls out a specified amount of days worth of logs to be used. This bot is primarily developed to be used with PISG with a logrotate functionality.
+http://evilzone.org
