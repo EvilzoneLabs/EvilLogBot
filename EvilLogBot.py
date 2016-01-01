@@ -13,7 +13,7 @@ import string
 import time
 
 configs = {
-    "server": "irc.evilzone.org",
+    "server": "vader.irc.evilzone.org",
     "channel": "#test",
     "port": 6667,
     "name": "StatBot"
@@ -53,7 +53,7 @@ def begin():
         if (data.strip() != ""):
             dataParts = data.split()
             if "PING" in dataParts[0]: irc.send("PONG %s\r\n" % data.split(" :")[1])
-            elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":")):
+            elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":") and (dataParts[2] != configs["name"])):
                 print data
         
         if (not joined):
