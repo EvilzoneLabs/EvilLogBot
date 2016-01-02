@@ -4,7 +4,7 @@
     Website: 9v.lt; Evilzone.org
     Description:
         EvilLogBot logs channel messages in raw format with a UNIX timestamp to an SQLite database and pulls out a specified amount of days worth of logs to be used with a log file analyzer like PISG. The time format of a generated log is set to zbot's, because it's easiest to manage without parsing anything (except the time, ofcourse).
-        This bot is primarily developed to be used with PISG on an EvilZone network and have an inbuilt logrotate functionality, but I tried to make it as generic as I can to work on other networks as well.
+        This bot is primarily developed to be used with PISG on an EvilZone network and have an inbuilt logrotate functionality, so it may not work with other networks.
 '''
 
 import socket
@@ -18,13 +18,13 @@ from datetime import timedelta
 
 #==============================================
 configs = {
-    "server": "vader.irc.evilzone.org",
+    "server": "irc.evilzone.org",
     "channel": "#test",
     "port": 6667,
-    "name": "StatBot",
+    "name": "NewStatsBot",
     "db_name": "EvilLogBot_logs.db",
     "log_name": "evilzone_logs.txt",
-    "table_name": "evilzone",
+    "table_name": "test",
     # let's us zbot's format, easiest format to deal with :)
     "time_format": "%m/%d/%y %H:%M:%S",
     "log_age": 60 # in days
@@ -82,7 +82,7 @@ def exportLog():
             f.write("%s %s" % (t, stripped))
 #==============================================
 def connect():
-    joined = False
+    firstPing = False
     dbConn = prepDb()
     dbCurs = dbConn.cursor()
     irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -94,15 +94,15 @@ def connect():
         data = irc.recv(512)
         if (data.strip() != ""):
             dataParts = data.split()
-            if ("PING" in dataParts[0]): irc.send("PONG %s\r\n" % data.split(" :")[1])
+            if ("PING" in dataParts[0]):
+                irc.send("PONG %s\r\n" % data.split(" :")[1])
+                if (not firstPing):
+                    irc.send("JOIN %s\r\n" % configs["channel"])
+                    firstPing = True
             elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":") and (dataParts[2] != configs["name"])):
-                dbCurs.execute("INSERT INTO {0} VALUES ('{1}', '{2}')".format(configs["table_name"], str(time.time()), data.strip()))
+                dbCurs.execute("INSERT INTO {0} VALUES ('{1}', '{2}')".format(configs["table_name"], str(int(time.time())), data.strip()))
                 dbConn.commit()
-                # print data
-        
-        if (not joined):
-            irc.send("JOIN %s\r\n" % configs["channel"])
-            joined = True
+                print data
             
         if ((dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
             irc.send("JOIN %s\r\n" % configs["channel"])
@@ -115,5 +115,5 @@ if __name__ == "__main__":
         else:
             print "Usage: %s [export]" % argv[0]
     else:
-        pass
-        # begin()
+        # pass
+        connect()
