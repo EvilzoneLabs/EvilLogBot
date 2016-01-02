@@ -24,7 +24,7 @@ configs = {
     "name": "NewStatsBot",
     "db_name": "EvilLogBot_logs.db",
     "log_name": "evilzone_logs.txt",
-    "table_name": "test",
+    "table_name": "evilzone",
     # let's us zbot's format, easiest format to deal with :)
     "time_format": "%m/%d/%y %H:%M:%S",
     "log_age": 60 # in days
@@ -66,10 +66,21 @@ def prepDb():
         dbConn.commit()
     return dbConn
 #==============================================
+def cleanDb(dbConn):
+    """ Function that removes rows that are older than
+        defined number of days - 1 (justin case).
+        This is some serious logrotate shit bruh."""
+    if (dbConn == None): dbConn = prepDb()
+    dbCurs = dbConn.cursor()
+    rmPeriod = int(time.time() - timedelta(days=(configs["log_age"]+1)).total_seconds())
+    dbCurs.execute("DELETE FROM {0} WHERE time <= {1}".format(configs["table_name"], rmPeriod))
+    dbConn.commit()
+#==============================================
 def exportLog():
     """ Method to export a given length of days.
         Strips HTML (not entities) for security. """
     dbConn = prepDb()
+    cleanDb(dbConn)
     dbCurs = dbConn.cursor()
     logPeriod = int(time.time() - timedelta(days=configs["log_age"]).total_seconds())
     dbCurs.execute("SELECT * FROM {0} WHERE time > {1}".format(configs["table_name"], str(logPeriod)))
@@ -77,9 +88,15 @@ def exportLog():
     tag_re = re.compile(r'(<!--.*?-->|<[^>]*>)')
     with open(configs["log_name"], "w") as f:
         for row in rtn:
-            t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
-            stripped = cgi.escape(tag_re.sub("", row[1]))
-            f.write("%s %s" % (t, stripped))
+            # additional cleaning done here, should remove this once proper checking is done in connect()
+            rowLines = row[1].split("\r\n")
+            for line in rowLines:
+                status = line.split()[1]
+                if (containsStatusId(status) or (status == "NOTICE")):
+                    continue
+                t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
+                stripped = cgi.escape(tag_re.sub("", line))
+                f.write("%s %s\n" % (t, stripped))
 #==============================================
 def connect():
     firstPing = False
@@ -91,7 +108,7 @@ def connect():
     irc.send("USER {0} {0} {0} :Evil{0}\r\n".format(configs["name"]))
     while True:
         data = ""
-        data = irc.recv(512)
+        data = irc.recv(768)
         if (data.strip() != ""):
             dataParts = data.split()
             if ("PING" in dataParts[0]):
@@ -100,7 +117,7 @@ def connect():
                     irc.send("JOIN %s\r\n" % configs["channel"])
                     firstPing = True
             elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":") and (dataParts[2] != configs["name"])):
-                dbCurs.execute("INSERT INTO {0} VALUES ('{1}', '{2}')".format(configs["table_name"], str(int(time.time())), data.strip()))
+                dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
                 dbConn.commit()
                 print data
             
