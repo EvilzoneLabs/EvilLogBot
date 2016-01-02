@@ -91,12 +91,16 @@ def exportLog():
             # additional cleaning done here, should remove this once proper checking is done in connect()
             rowLines = row[1].split("\r\n")
             for line in rowLines:
-                status = line.split()[1]
-                if (containsStatusId(status) or (status == "NOTICE")):
+                try:
+                    status = line.split()[1]
+                    if (containsStatusId(status) or (status == "NOTICE")):
+                        continue
+                    t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
+                    stripped = cgi.escape(tag_re.sub("", line))
+                    f.write("%s %s\n" % (t, stripped))
+                except:
+                    # shit happened, ignore...
                     continue
-                t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
-                stripped = cgi.escape(tag_re.sub("", line))
-                f.write("%s %s\n" % (t, stripped))
 #==============================================
 def connect():
     firstPing = False
@@ -110,19 +114,23 @@ def connect():
         data = ""
         data = irc.recv(768)
         if (data.strip() != ""):
-            dataParts = data.split()
-            if ("PING" in dataParts[0]):
-                irc.send("PONG %s\r\n" % data.split(" :")[1])
-                if (not firstPing):
+            try:
+                dataParts = data.split()
+                if ("PING" in dataParts[0]):
+                    irc.send("PONG %s\r\n" % data.split(" :")[1])
+                    if (not firstPing):
+                        irc.send("JOIN %s\r\n" % configs["channel"])
+                        firstPing = True
+                elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":") and (dataParts[2] != configs["name"])):
+                    dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
+                    dbConn.commit()
+                    print data
+                
+                if ((dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
                     irc.send("JOIN %s\r\n" % configs["channel"])
-                    firstPing = True
-            elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":") and (dataParts[2] != configs["name"])):
-                dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
-                dbConn.commit()
-                print data
-            
-        if ((dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
-            irc.send("JOIN %s\r\n" % configs["channel"])
+            except:
+                # shit happened, ignore...
+                continue
 #==============================================
 
 if __name__ == "__main__":
