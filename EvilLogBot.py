@@ -13,6 +13,8 @@ import time
 import sqlite3
 import re
 import cgi
+import traceback
+import sys
 from sys import argv
 from datetime import timedelta
 
@@ -92,14 +94,19 @@ def exportLog():
             rowLines = row[1].split("\r\n")
             for line in rowLines:
                 try:
-                    status = line.split()[1]
-                    if (containsStatusId(status) or (status == "NOTICE")):
-                        continue
-                    t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
-                    stripped = cgi.escape(tag_re.sub("", line))
-                    f.write("%s %s\n" % (t, stripped))
+                    status = line.split()
+                    if (len(status) > 1):
+                        if (containsStatusId(status[1]) or (status[1] == "NOTICE") or (status[0] == "PING")):
+                            continue
+                        t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
+                        stripped = cgi.escape(tag_re.sub("", line))
+                        f.write("%s %s\n" % (t, stripped))
                 except:
-                    # shit happened, ignore...
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+                    with open("parse_errors.txt", "a") as g:
+                        g.write(''.join(line for line in lines))
+                        g.write("\r\n")
                     continue
 #==============================================
 def connect():
@@ -112,7 +119,7 @@ def connect():
     irc.send("USER {0} {0} {0} :Evil{0}\r\n".format(configs["name"]))
     while True:
         data = ""
-        data = irc.recv(768)
+        data = irc.recv(512)
         if (data.strip() != ""):
             try:
                 dataParts = data.split()
@@ -129,7 +136,9 @@ def connect():
                 if ((dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
                     irc.send("JOIN %s\r\n" % configs["channel"])
             except:
-                # shit happened, ignore...
+                with open("connection_errors.txt", "a") as g:
+                        g.write(''.join(line for line in lines))
+                        g.write("\r\n")
                 continue
 #==============================================
 
