@@ -118,26 +118,28 @@ def connect():
     irc.send("NICK %s\r\n" % configs["name"])
     irc.send("USER {0} {0} {0} :Evil{0}\r\n".format(configs["name"]))
     while True:
-        data = ""
-        data = irc.recv(512)
-        if (data.strip() != ""):
+        rawData = ""
+        rawData = irc.recv(4096)
+        if (rawData.strip() != ""):
             try:
-                dataParts = data.split()
-                if ("PING" in dataParts[0]):
-                    irc.send("PONG %s\r\n" % data.split(" :")[1])
-                    if (not firstPing):
+                dataLines = rawData.split("\r\n")
+                for data in dataLines:
+                    dataParts = data.split()
+                    if ((len(dataParts) > 2) and (dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
                         irc.send("JOIN %s\r\n" % configs["channel"])
-                        firstPing = True
-                elif (not containsStatusId(dataParts[1]) and (dataParts[0][0] == ":") and (dataParts[2] != configs["name"])):
-                    dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
-                    dbConn.commit()
-                    print data
-                
-                if ((dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
-                    irc.send("JOIN %s\r\n" % configs["channel"])
+                    elif ((len(dataParts) > 1) and (not containsStatusId(dataParts[1])) and (dataParts[0][0] == ":")):
+                        dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
+                        dbConn.commit()
+                        print data
+                    elif ((len(dataParts) > 0) and ("PING" in dataParts[0])):
+                            irc.send("PONG %s\r\n" % data.split(" :")[1])
+                            # print "sent"
+                            if (not firstPing):
+                                irc.send("JOIN %s\r\n" % configs["channel"])
+                                firstPing = True
             except:
                 with open("connection_errors.txt", "a") as g:
-                        g.write(''.join(line for line in lines))
+                        g.write(traceback.format_exc())
                         g.write("\r\n")
                 continue
 #==============================================
