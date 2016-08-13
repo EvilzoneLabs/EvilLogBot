@@ -1,6 +1,7 @@
 '''
     Author: Kulverstukas
     Date: 2015.12.31
+    Last update: 2016.08.13
     Website: 9v.lt; Evilzone.org
     Description:
         EvilLogBot logs channel messages in raw format with a UNIX timestamp to an SQLite database and pulls out a specified amount of days worth of logs to be used with a log file analyzer like PISG. The time format of a generated log is set to zbot's, because it's easiest to manage without parsing anything (except the time, ofcourse).
@@ -27,7 +28,7 @@ configs = {
     "db_name": "EvilLogBot_logs.db",
     "log_name": "evilzone_logs.txt",
     "table_name": "evilzone",
-    # let's us zbot's format, easiest format to deal with :)
+    # let's use zbot's format, easiest format to deal with :)
     "time_format": "%m/%d/%y %H:%M:%S",
     "log_age": 60 # in days
 }
@@ -125,9 +126,17 @@ def connect():
                 dataLines = rawData.split("\r\n")
                 for data in dataLines:
                     dataParts = data.split()
-                    if ((len(dataParts) > 2) and (dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
-                        irc.send("JOIN %s\r\n" % configs["channel"])
-                    elif ((len(dataParts) > 1) and (not containsStatusId(dataParts[1])) and (dataParts[0][0] == ":")):
+                    if (len(dataParts) > 2):
+                        # print dataParts
+                        if ((dataParts[1] == "KICK") and (dataParts[3] == configs["name"])):
+                            irc.send("JOIN %s\r\n" % configs["channel"])
+                            continue
+                        elif ((dataParts[0] == "ERROR") and (dataParts[1] == ":Closing")):
+                            irc.close()
+                            dbCurs.close()
+                            dbConn.close()
+                            return False
+                    if ((len(dataParts) > 1) and (not containsStatusId(dataParts[1])) and (dataParts[0][0] == ":")):
                         dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
                         dbConn.commit()
                         print data
@@ -152,4 +161,6 @@ if __name__ == "__main__":
             print "Usage: %s [export]" % argv[0]
     else:
         # pass
-        connect()
+        while True:
+            # connection was killed somehow
+            connect()
