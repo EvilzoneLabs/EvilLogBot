@@ -11,23 +11,26 @@
 import socket
 import string
 import time
-import sqlite3
 import re
 import cgi
 import traceback
 import sys
 from sys import argv
-from datetime import timedelta
 
+#==============================================
+# change this import statement to whatever module you would like to use
+
+# from sqlite_module import DB_module
+from mysql_module import DB_module
+
+dbManager = DB_module()
 #==============================================
 configs = {
     "server": "irc.evilzone.org",
     "channel": "#test",
     "port": 6667,
     "name": "NewStatsBot",
-    "db_name": "EvilLogBot_logs.db",
     "log_name": "evilzone_logs.txt",
-    "table_name": "evilzone",
     # let's use zbot's format, easiest format to deal with :)
     "time_format": "%m/%d/%y %H:%M:%S",
     "log_age": 60 # in days
@@ -56,41 +59,15 @@ def containsStatusId(data):
         (data == "422") or
         (data == "366"))
 #==============================================
-def prepDb():
-    """ Preps the database for usage """
-    dbConn = sqlite3.connect(configs["db_name"])
-    dbConn.text_factory = str
-    dbCurs = dbConn.cursor()
-    # we should check if the defined table exists
-    dbCurs.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (configs["table_name"],))
-    rtn = dbCurs.fetchone()
-    if (rtn == None):
-        dbCurs.execute("CREATE TABLE {0} (time text, log text)".format(configs["table_name"]))
-        dbConn.commit()
-    return dbConn
-#==============================================
-def cleanDb(dbConn):
-    """ Function that removes rows that are older than
-        defined number of days - 1 (justin case).
-        This is some serious logrotate shit bruh."""
-    if (dbConn == None): dbConn = prepDb()
-    dbCurs = dbConn.cursor()
-    rmPeriod = int(time.time() - timedelta(days=(configs["log_age"]+1)).total_seconds())
-    dbCurs.execute("DELETE FROM {0} WHERE time <= {1}".format(configs["table_name"], rmPeriod))
-    dbConn.commit()
-#==============================================
 def exportLog():
     """ Method to export a given length of days.
         Strips HTML (not entities) for security. """
-    dbConn = prepDb()
-    cleanDb(dbConn)
-    dbCurs = dbConn.cursor()
-    logPeriod = int(time.time() - timedelta(days=configs["log_age"]).total_seconds())
-    dbCurs.execute("SELECT * FROM {0} WHERE time > {1}".format(configs["table_name"], str(logPeriod)))
-    rtn = dbCurs.fetchall()
+    dbManager.prepareDb()
+    dbManager.cleanDb(configs["log_age"])
+    logs = dbManager.getLogs(configs["log_age"])
     tag_re = re.compile(r'(<!--.*?-->|<[^>]*>)')
     with open(configs["log_name"], "w") as f:
-        for row in rtn:
+        for row in logs:
             # additional cleaning done here, should remove this once proper checking is done in connect()
             rowLines = row[1].split("\r\n")
             for line in rowLines:
@@ -112,8 +89,7 @@ def exportLog():
 #==============================================
 def connect():
     firstPing = False
-    dbConn = prepDb()
-    dbCurs = dbConn.cursor()
+    dbManager.prepareDb()
     irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     irc.connect((configs["server"], configs["port"]))
     irc.send("NICK %s\r\n" % configs["name"])
@@ -133,12 +109,9 @@ def connect():
                             continue
                         elif ((dataParts[0] == "ERROR") and (dataParts[1] == ":Closing")):
                             irc.close()
-                            dbCurs.close()
-                            dbConn.close()
                             return False
                     if ((len(dataParts) > 1) and (not containsStatusId(dataParts[1])) and (dataParts[0][0] == ":")):
-                        dbCurs.execute("INSERT INTO {0} VALUES (?, ?)".format(configs["table_name"]), (str(int(time.time())), data.strip()))
-                        dbConn.commit()
+                        dbManager.insertLog(data.strip())
                         print data
                     elif ((len(dataParts) > 0) and ("PING" in dataParts[0])):
                             irc.send("PONG %s\r\n" % data.split(" :")[1])
