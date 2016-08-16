@@ -1,3 +1,4 @@
 *.txt
 DbMaker.py
 *.db
+*.pyc
