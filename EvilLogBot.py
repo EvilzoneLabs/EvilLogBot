@@ -38,26 +38,10 @@ configs = {
 #==============================================
 def containsStatusId(data):
     """ Checks if a received line of data contains a status code which we should skip (motd etc...) """
-    return ((data == "451") or
-        (data == "001") or
-        (data == "002") or
-        (data == "003") or
-        (data == "004") or
-        (data == "005") or
-        (data == "251") or
-        (data == "252") or
-        (data == "254") or
-        (data == "255") or
-        (data == "265") or
-        (data == "266") or
-        (data == "375") or
-        (data == "372") or
-        (data == "376") or
-        (data == "332") or
-        (data == "333") or
-        (data == "353") or
-        (data == "422") or
-        (data == "366"))
+    return (data in ["451", "001", "002", "003", "004", "005",
+                     "251", "252", "254", "255", "265", "266",
+                     "375", "372", "376", "332", "333", "353",
+                     "422", "366"])
 #==============================================
 def exportLog():
     """ Method to export a given length of days.
