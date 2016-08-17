@@ -33,7 +33,7 @@ configs = {
     "log_name": "evilzone_logs.txt",
     # let's use zbot's format, easiest format to deal with :)
     "time_format": "%m/%d/%y %H:%M:%S",
-    "log_age": 60 # in days
+    "log_age": 1 # in days
 }
 #==============================================
 def containsStatusId(data):
@@ -95,6 +95,11 @@ def connect():
                             irc.close()
                             return False
                     if ((len(dataParts) > 1) and (not containsStatusId(dataParts[1])) and (dataParts[0][0] == ":")):
+                        match = re.search(r":.+?!", dataParts[0])
+                        if match:
+                            nickname = match.group(0)[1:-1]
+                            if (dbManager.shouldIgnore(nickname)):
+                                continue
                         dbManager.insertLog(data.strip())
                         print data
                     elif ((len(dataParts) > 0) and ("PING" in dataParts[0])):
