@@ -37,33 +37,25 @@ configs = {
     "log_age": 1 # in days
 }
 #==============================================
-def containsStatusId(data):
-    """ Checks if a received line of data contains a status code which we should skip (motd etc...) """
-    return (data in ["451", "001", "002", "003", "004", "005",
-                     "251", "252", "254", "255", "265", "266",
-                     "375", "372", "376", "332", "333", "353",
-                     "422", "366"])
+def shouldLogThis(data):
+    """ Checks if a received line of data contains what we should save. """
+    match = re.search(r":.+?!.+?@.+?$", data)
+    return (match is not None) # if it contains a user
 #==============================================
 def exportLog():
     """ Method to export a given length of days.
         Strips HTML (not entities) for security. """
-    dbManager.prepareDb()
     dbManager.cleanDb(configs["log_age"])
     logs = dbManager.getLogs(configs["log_age"])
     tag_re = re.compile(r'(<!--.*?-->|<[^>]*>)')
     with open(configs["log_name"], "w") as f:
         for row in logs:
-            # additional cleaning done here, should remove this once proper checking is done in connect()
             rowLines = row[1].split("\r\n")
             for line in rowLines:
                 try:
-                    status = line.split()
-                    if (len(status) > 1):
-                        if (containsStatusId(status[1]) or (status[1] == "NOTICE") or (status[0] == "PING")):
-                            continue
-                        t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
-                        stripped = cgi.escape(tag_re.sub("", line))
-                        f.write("%s %s\n" % (t, stripped))
+                    t = time.strftime(configs["time_format"], time.gmtime(float(row[0])))
+                    stripped = cgi.escape(tag_re.sub("", line))
+                    f.write("%s %s\n" % (t, stripped))
                 except:
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
@@ -94,7 +86,7 @@ def connect():
                         elif ((dataParts[0] == "ERROR") and (dataParts[1] == ":Closing")):
                             irc.close()
                             return False
-                    if ((len(dataParts) > 1) and (not containsStatusId(dataParts[1])) and (dataParts[0][0] == ":")):
+                    if ((len(dataParts) > 1) and (shouldLogThis(dataParts[0]))):
                         match = re.search(r":.+?!", dataParts[0])
                         if match:
                             nickname = match.group(0)[1:-1]
