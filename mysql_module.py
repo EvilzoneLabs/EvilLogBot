@@ -69,6 +69,18 @@ class DB_module():
         res = curs.fetchall()
         curs.close()
         return (len(res) > 0)
+        
+    def addToIgnore(self, nickname):
+        curs = self.dbConn.cursor()
+        curs.execute("INSERT INTO `ignore` VALUES ('{0}')".format(nickname))
+        self.dbConn.commit()
+        curs.close()
+        
+    def delFromIgnore(self, nickname):
+        curs = self.dbConn.cursor()
+        curs.execute("DELETE FROM `ignore` WHERE criteria = '{0}'".format(nickname))
+        self.dbConn.commit()
+        curs.close()
 #==============================================
 if __name__ == "__main__":
     exit("%s: Direct script execution is not allowed" % argv[0])

@@ -24,6 +24,7 @@ from sys import argv
 from mysql_module import DB_module
 
 dbManager = DB_module()
+dbManager.prepareDb()
 #==============================================
 configs = {
     "server": "irc.evilzone.org",
@@ -73,7 +74,6 @@ def exportLog():
 #==============================================
 def connect():
     firstPing = False
-    dbManager.prepareDb()
     irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     irc.connect((configs["server"], configs["port"]))
     irc.send("NICK %s\r\n" % configs["name"])
@@ -119,8 +119,16 @@ if __name__ == "__main__":
     if (len(argv) > 1):
         if (argv[1] == "export"):
             exportLog()
+        elif ((argv[1] == "ignore") and (len(argv) > 3)):
+            if (argv[2] == "add"):
+                dbManager.addToIgnore(argv[3])
+                print "%s added to ignore list" % argv[3]
+            elif (argv[2] == "del"):
+                dbManager.delFromIgnore(argv[3])
+                print "%s deleted from ignore list" % argv[3]
         else:
             print "Usage: %s [export]" % argv[0]
+            print "       %s ignore [add/del] <nickname>" % argv[0]
     else:
         # pass
         while True:
