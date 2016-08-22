@@ -39,7 +39,7 @@ class DB_module():
     ''' Inserts given text into the database '''
     def insertLog(self, text):
         curs = self.dbConn.cursor()
-        curs.execute("INSERT INTO {0} VALUES ('{1}', '{2}')".format(self.configs["log_table_name"], str(int(time.time())), text))
+        curs.execute("INSERT INTO {0} VALUES (%s, %s)".format(self.configs["log_table_name"]), (str(int(time.time())), text))
         self.dbConn.commit()
         curs.close()
     
@@ -51,34 +51,34 @@ class DB_module():
     def cleanDb(self, logAge):
         rmPeriod = int(time.time() - timedelta(days=(int(logAge)+1)).total_seconds())
         curs = self.dbConn.cursor()
-        curs.execute("DELETE FROM {0} WHERE time <= {1}".format(self.configs["log_table_name"], rmPeriod))
+        curs.execute("DELETE FROM {0} WHERE time <= %s".format(self.configs["log_table_name"]), (rmPeriod,))
         self.dbConn.commit()
         curs.close()
 
     def getLogs(self, logAge):
         logPeriod = int(time.time() - timedelta(days=logAge).total_seconds())
         curs = self.dbConn.cursor()
-        curs.execute("SELECT * FROM {0} WHERE time > {1}".format(self.configs["log_table_name"], str(logPeriod)))
+        curs.execute("SELECT * FROM {0} WHERE time > %s".format(self.configs["log_table_name"]), (str(logPeriod),))
         res = curs.fetchall()
         curs.close()
         return res
         
     def shouldIgnore(self, criteria):
         curs = self.dbConn.cursor()
-        curs.execute("SELECT * FROM `ignore` WHERE LOWER(criteria) = '{0}'".format(criteria.lower()))
+        curs.execute("SELECT * FROM `ignore` WHERE LOWER(criteria) = %s", (criteria.lower(),))
         res = curs.fetchall()
         curs.close()
         return (len(res) > 0)
         
     def addToIgnore(self, nickname):
         curs = self.dbConn.cursor()
-        curs.execute("INSERT INTO `ignore` VALUES ('{0}')".format(nickname))
+        curs.execute("INSERT INTO `ignore` VALUES (%s)", (nickname,))
         self.dbConn.commit()
         curs.close()
         
     def delFromIgnore(self, nickname):
         curs = self.dbConn.cursor()
-        curs.execute("DELETE FROM `ignore` WHERE criteria = '{0}'".format(nickname))
+        curs.execute("DELETE FROM `ignore` WHERE criteria = %s", (nickname,))
         self.dbConn.commit()
         curs.close()
 #==============================================
