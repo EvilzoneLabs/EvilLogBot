@@ -55,7 +55,7 @@ class DB_module():
         return (len(self.dbConn.cursor().execute("SELECT * FROM 'ignore' WHERE LOWER(criteria) = '{0}'".format(criteria.lower())).fetchall()) > 0)
         
     def addToIgnore(self, nickname):
-        self.dbConn.cursor().execute("INSERT INTO `ignore` VALUES ('{0}')".format(nickname))
+        self.dbConn.cursor().execute("INSERT INTO `ignore` VALUES (?)", (nickname,))
         self.dbConn.commit()
         
     def delFromIgnore(self, nickname):
