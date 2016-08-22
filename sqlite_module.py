@@ -61,6 +61,9 @@ class DB_module():
     def delFromIgnore(self, nickname):
         self.dbConn.cursor().execute("DELETE FROM `ignore` WHERE criteria = '{0}'".format(nickname))
         self.dbConn.commit()
+        
+    def listIgnored(self):
+        return self.dbConn.cursor().execute("SELECT * FROM `ignore`").fetchall()
 #==============================================
 if __name__ == "__main__":
     exit("%s: Direct script execution is not allowed" % argv[0])

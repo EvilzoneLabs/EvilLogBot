@@ -20,8 +20,8 @@ from sys import argv
 #==============================================
 # change this import statement to whatever module you would like to use
 
-# from sqlite_module import DB_module
-from mysql_module import DB_module
+from sqlite_module import DB_module
+# from mysql_module import DB_module
 
 dbManager = DB_module()
 dbManager.prepareDb()
@@ -118,9 +118,12 @@ if __name__ == "__main__":
             elif (argv[2] == "del"):
                 dbManager.delFromIgnore(argv[3])
                 print "%s deleted from ignore list" % argv[3]
+        elif ((argv[1] == "ignore") and (len(argv) > 2) and (argv[2] == "list")):
+            for counter, person in enumerate(dbManager.listIgnored()):
+                print "[%d] %s" % (counter, person[0])
         else:
             print "Usage: %s [export]" % argv[0]
-            print "       %s ignore [add/del] <nickname>" % argv[0]
+            print "       %s ignore [add/del/list] <nickname>" % argv[0]
     else:
         # pass
         while True:
