@@ -55,15 +55,15 @@ class DB_module():
         return (len(self.dbConn.cursor().execute("SELECT * FROM ignore WHERE LOWER(criteria) = ?", (criteria.lower(),)).fetchall()) > 0)
         
     def addToIgnore(self, nickname):
-        self.dbConn.cursor().execute("INSERT INTO `ignore` VALUES (?)", (nickname,))
+        self.dbConn.cursor().execute("INSERT INTO ignore VALUES (?)", (nickname,))
         self.dbConn.commit()
         
     def delFromIgnore(self, nickname):
-        self.dbConn.cursor().execute("DELETE FROM `ignore` WHERE criteria = ?", (nickname,))
+        self.dbConn.cursor().execute("DELETE FROM ignore WHERE criteria = ?", (nickname,))
         self.dbConn.commit()
         
     def listIgnored(self):
-        return self.dbConn.cursor().execute("SELECT * FROM `ignore`").fetchall()
+        return self.dbConn.cursor().execute("SELECT * FROM ignore").fetchall()
 #==============================================
 if __name__ == "__main__":
     exit("%s: Direct script execution is not allowed" % argv[0])

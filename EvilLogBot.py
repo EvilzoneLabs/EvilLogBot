@@ -20,8 +20,8 @@ from sys import argv
 #==============================================
 # change this import statement to whatever module you would like to use
 
-from sqlite_module import DB_module
-# from mysql_module import DB_module
+# from sqlite_module import DB_module
+from mysql_module import DB_module
 
 dbManager = DB_module()
 dbManager.prepareDb()
