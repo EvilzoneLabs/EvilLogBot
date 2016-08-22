@@ -44,22 +44,22 @@ class DB_module():
     '''
     def cleanDb(self, logAge):
         rmPeriod = int(time.time() - timedelta(days=(int(logAge)+1)).total_seconds())
-        self.dbConn.cursor().execute("DELETE FROM {0} WHERE time <= {1}".format(self.configs["log_table_name"], rmPeriod))
+        self.dbConn.cursor().execute("DELETE FROM {0} WHERE time <= ?".format(self.configs["log_table_name"]), (rmPeriod,))
         self.dbConn.commit()
 
     def getLogs(self, logAge):
         logPeriod = int(time.time() - timedelta(days=logAge).total_seconds())
-        return self.dbConn.cursor().execute("SELECT * FROM {0} WHERE time > {1}".format(self.configs["log_table_name"], str(logPeriod))).fetchall()
+        return self.dbConn.cursor().execute("SELECT * FROM {0} WHERE time > ?".format(self.configs["log_table_name"]), (str(logPeriod),)).fetchall()
         
     def shouldIgnore(self, criteria):
-        return (len(self.dbConn.cursor().execute("SELECT * FROM 'ignore' WHERE LOWER(criteria) = '{0}'".format(criteria.lower())).fetchall()) > 0)
+        return (len(self.dbConn.cursor().execute("SELECT * FROM ignore WHERE LOWER(criteria) = ?", (criteria.lower(),)).fetchall()) > 0)
         
     def addToIgnore(self, nickname):
         self.dbConn.cursor().execute("INSERT INTO `ignore` VALUES (?)", (nickname,))
         self.dbConn.commit()
         
     def delFromIgnore(self, nickname):
-        self.dbConn.cursor().execute("DELETE FROM `ignore` WHERE criteria = '{0}'".format(nickname))
+        self.dbConn.cursor().execute("DELETE FROM `ignore` WHERE criteria = ?", (nickname,))
         self.dbConn.commit()
         
     def listIgnored(self):
